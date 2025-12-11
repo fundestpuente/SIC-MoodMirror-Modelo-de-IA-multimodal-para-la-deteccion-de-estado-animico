@@ -12,7 +12,7 @@ Con eso obtiene una lectura general de tu estado emocional y te da sugerencias s
 
 ## Componentes del proyecto
 
-MoodMirror está compuesto por tres módulos principales. En este repositorio encontrarás dos:
+MoodMirror está compuesto por tres módulos principales::
 
 1. Un modelo para detección de emociones en texto.
 2. Un modelo CNN para detección de emociones en imágenes.
@@ -23,22 +23,24 @@ MoodMirror está compuesto por tres módulos principales. En este repositorio en
 Modelo basado en XLM-RoBERTa entrenado con datasets públicos. Procesa frases en español y devuelve una emoción entre varias categorías como alegría, ira, tristeza, disgusto, miedo, neutral o sorpresa.
 
 Incluye:
-- carga y unión de datasets,
-- tokenización,
-- entrenamiento con HuggingFace,
-- guardado del modelo,
-- ejemplo de inferencia.
+- carga y unión de datasets (se pueden encontrar los datasets usados en los enlaces al inicio del código)
+- tokenización
+- entrenamiento con HuggingFace
+- guardado del modelo (importante para el uso de la aplicación)
+- ejemplo de inferencia
 
 ### 2. Modelo de análisis emocional en imágenes (emotion_detection_image.ipynb)
 Una CNN desarrollada con Keras para clasificar expresiones faciales en diferentes emociones.
 
 Incluye:
-- preparación del dataset,
-- aumentación de datos,
-- entrenamiento y validación,
-- matriz de confusión,
-- guardado del modelo en formato .h5,
-- ejemplo de predicción con una imagen real.
+- preparación del dataset (el dataset usado se incluye en la carpeta )
+- aumentación de datos
+- entrenamiento y validación
+- matriz de confusión
+- guardado del modelo en formato  (importante para el uso de la aplicación)
+- ejemplo de predicción con una imagen real
 
 
 ### 3. Aplicación móvil 
+
+
