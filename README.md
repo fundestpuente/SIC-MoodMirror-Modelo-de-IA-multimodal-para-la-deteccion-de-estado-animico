@@ -45,105 +45,143 @@ Incluye:
 
 ## Backend FAST API
 
-El backend del proyecto MoodMirror está desarrollado en FastAPI e integra tres componentes principales:
-1. Un modelo CNN en TensorFlow para detectar emociones en la imagen.
-2. La API de OpenAI para analizar el sentimiento del texto.
-3. Una base de datos SQLite donde se almacenan las entradas del diario.
+El backend de MoodMirror implementa un sistema de análisis emocional multimodal combinando tres modelos de inteligencia artificial:
 
-El backend expone varios endpoints que permiten recibir datos desde la aplicación Flutter, procesarlos y devolver los resultados.
+1. Un modelo CNN entrenado para reconocimiento de emociones faciales.
+2. Un modelo Transformer tipo RoBERTa (RoBERTuito) para el análisis de sentimiento del texto.
+3. Un modelo LLM de OpenAI para refinar la interpretación emocional y generar un consejo personalizado.
+
+Toda la lógica está implementada en FastAPI, mientras que los datos se almacenan de forma local en SQLite.
 
 --------------------------------------------------------
-4.1 Ejecutar el backend
+4.1 Arquitectura general del backend
 --------------------------------------------------------
 
-Para iniciar el servidor FastAPI, se usa Uvicorn:
+Cuando el usuario envía una entrada desde la app (una foto y una nota escrita), el backend realiza:
+
+1. Procesamiento de la imagen → predicción emocional con la CNN.
+2. Procesamiento del texto → sentimiento mediante el Transformer RoBERTuito.
+3. Refinamiento emocional y generación de consejo → LLM de OpenAI.
+4. Fusión de resultados → una única emoción dominante.
+5. Almacenamiento en SQLite.
+
+Esto permite un análisis emocional más completo, ya que combina señales visuales + textuales + razonamiento contextual.
+
+--------------------------------------------------------
+4.2 Ejecución del backend
+
+Para iniciar el servicio:
 
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
-- --host 0.0.0.0 permite que un celular en la misma red pueda acceder al servidor.
-- --reload reinicia el servidor automáticamente cuando hay cambios.
-
-El backend quedará disponible en:
-
-http://IP_DEL_SERVIDOR:8000
+- Permite el acceso desde otros dispositivos en la red.
+- Habilita recarga automática al modificar el código.
 
 --------------------------------------------------------
-4.2 Archivos principales
+4.3 Modelos utilizados
 --------------------------------------------------------
 
-- main.py → contiene todos los endpoints
-- model/*.h5 → modelo CNN para reconocimiento emocional
-- db.sqlite3 → base de datos donde se guardan las entradas del diario
+(1) CNN para emociones en imagen
+--------------------------------
+Se carga el modelo: model/cnn_moodmirror_64px_50dataset.h5
+
+Este modelo clasifica la expresión facial en:
+Angry, Happy, Neutral, Sad, Surprise.
+
+(2) Transformer RoBERTuito
+---------------------------
+Se usa un modelo tipo RoBERTa en español para analizar el sentimiento del texto escrito por el usuario.  
+Este modelo ofrece una predicción mucho más precisa del estado emocional textual que un clasificador tradicional.
+
+Detecta sentimientos como:
+- alegría
+- neutralidad
+- tristeza
+- enojo
+- sorpresa
+
+(3) Modelo de OpenAI (LLM)
+---------------------------
+El LLM cumple dos funciones:
+1. Refinar y normalizar las salidas de ambos modelos.
+2. Generar un consejo emocional basado en:
+   - 70% emoción textual (RoBERTuito)
+   - 30% emoción visual (CNN)
+
+La respuesta final se adapta a la situación emocional del usuario.
 
 --------------------------------------------------------
-4.3 Endpoints disponibles
+4.4 Endpoints principales
 --------------------------------------------------------
 
 (1) POST /add_entry
 -------------------
 
-Este endpoint recibe:
-- Una foto (UploadFile)
-- Un texto escrito por el usuario
+Recibe:
+- Una imagen (UploadFile)
+- Una nota escrita (texto)
 
-El backend ejecuta:
-1. Procesamiento de la imagen y predicción de emoción mediante CNN.
-2. Análisis del texto usando el modelo de OpenAI.
-3. Fusión de ambas emociones para generar un consejo.
-4. Guardado de la entrada en la base de datos SQLite.
+El backend ejecuta la siguiente secuencia:
 
-Retorna un JSON con:
-- Fecha de la entrada
-- Nota del usuario
-- Emoción detectada en la imagen
-- Emoción detectada en el texto
-- Consejo generado
+1. La imagen se procesa y la CNN predice una emoción facial.
+2. El texto se envía al modelo Transformer RoBERTuito, que devuelve su propia etiqueta emocional.
+3. Ambas emociones se fusionan y se envían a OpenAI.
+4. El LLM interpreta la situación emocional, contextualiza y genera un consejo breve.
+5. La entrada completa se guarda en SQLite.
+
+Devuelve un JSON con:
+- Fecha y hora
+- Nota original
+- Emoción detectada por imagen
+- Emoción detectada por texto (Transformer)
+- Consejo generado por OpenAI
 
 (2) GET /entries
-----------------
+-----------------
 
-Devuelve una lista con todas las entradas almacenadas en SQLite, ordenadas por fecha.
-Cada entrada incluye:
-- id de registro
-- fecha
-- texto original
-- emoción por imagen
-- emoción por texto
-- consejo generado
-
-La app Flutter usa este endpoint para mostrar el diario y el progreso semanal.
+Obtiene todas las entradas almacenadas en la base de datos, ordenadas por fecha.  
+Es usado por la app para mostrar el diario del usuario.
 
 (3) DELETE /delete_entry/{id}
------------------------------
+------------------------------
 
-Permite eliminar una entrada del diario según su ID.
-La aplicación móvil lo usa cuando el usuario quiere borrar una entrada que ya no desea mantener.
-
---------------------------------------------------------
-4.4 Procesos internos del backend
---------------------------------------------------------
-
-- preprocess_image(): Convierte la imagen recibida en un tensor adecuado para la CNN.
-- analyze_text_sentiment(): Usa OpenAI para detectar sentimiento del texto.
-- generate_advice(): Crea un consejo basado 70% en el texto y 30% en la emoción de la imagen.
-- SQLite se usa como almacenamiento local simple para persistencia de entradas.
+Elimina una entrada específica por su ID.  
+Se usa para limpiar o actualizar el diario.
 
 --------------------------------------------------------
-4.5 Requisitos principales del backend
+4.5 Flujo emocional multimodal
 --------------------------------------------------------
 
-pip install fastapi uvicorn tensorflow pillow numpy openai
+El backend combina tres fuentes:
 
-Además, se debe incluir la clave de OpenAI en:
+- La “señal visual” (CNN)
+- La “señal lingüística” (Transformer RoBERTuito)
+- La “señal interpretativa” (LLM de OpenAI)
 
-client = OpenAI(api_key="YOUR_OPENAI_API_KEY")
+Esto genera un análisis emocional más robusto que usar solo uno de los modelos.
+
+La ponderación final:
+- 70% emoción textual (lenguaje)
+- 30% emoción visual (rostro)
+
+OpenAI se encarga de interpretar ambas señales y convertirlas en un consejo personalizado.
 
 --------------------------------------------------------
-4.6 Ejemplo de ejecución exitosa
+4.6 Almacenamiento
+--------------------------------------------------------
 
-INFO:     Uvicorn running on http://0.0.0.0:8000
-INFO:     192.168.1.50:54022 - "POST /add_entry HTTP/1.1" 200 OK
-INFO:     192.168.1.50:54040 - "GET /entries HTTP/1.1" 200 OK
+Cada entrada queda registrada en SQLite con:
+- Fecha
+- Texto original
+- Emoción de imagen
+- Emoción del Transformer
+- Consejo generado
+
+Esto permite construir funciones como:
+- Resumen semanal
+- Análisis mensual
+- Detección de patrones emocionales
+- Alertas en caso de emociones negativas repetidas
 
 
 
